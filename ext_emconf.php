@@ -2,16 +2,16 @@
 
 $EM_CONF[$_EXTKEY] = [
     'title' => 'Melon Images',
-    'description' => 'Responsive Images Management',
+    'description' => 'Responsive Image Management',
     'category' => 'plugin',
     'author' => 'Sebastian Michaelsen',
     'author_email' => 'sebastian@michaelsen.io',
     'state' => 'stable',
-    'version' => '3.0.3',
+    'version' => '4.0.0',
     'constraints' => [
         'depends' => [
-            'typo3' => '10.4.0-11.5.99',
-            'php' => '7.0.0-7.4.99',
+            'typo3' => '11.5.0-12.4.99',
+            'php' => '7.4.0-8.2.99',
         ],
     ],
 ];

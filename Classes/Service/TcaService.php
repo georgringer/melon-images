@@ -47,7 +47,13 @@ class TcaService
             );
         } else {
             foreach ($fieldConfig as $subType => $subFields) {
+                if (!is_array($subFields)) {
+                    continue;
+                }
                 foreach ($subFields as $subFieldName => $subFieldConfig) {
+                    if (!is_array($subFieldConfig)) {
+                        continue;
+                    }
                     $subVariantPrefixParts = $variantIdPrefixParts;
                     $subVariantPrefixParts[] = $subType;
                     $subVariantPrefixParts[] = $subFieldName;
@@ -95,11 +101,17 @@ class TcaService
             $identifier = $sizeConfig['ratio'] ?? $sizeIdentifier;
             if (!isset($sizeConfig['allowedRatios']) && (isset($sizeConfig['width']) || isset($sizeConfig['height']))) {
                 $ratioIdentifier = $sizeConfig['title'] ?? $sizeConfig['ratio'] ?? ($sizeConfig['width'] . ' x ' . $sizeConfig['height']);
-                $sizeConfig = [
-                    'allowedRatios' => [
-                        $ratioIdentifier => $sizeConfig,
-                    ],
-                ];
+                $nestedConfig = $sizeConfig;
+                $sizeConfig = [];
+                if (isset($nestedConfig['focusArea'])) {
+                    $sizeConfig['focusArea'] = $nestedConfig['focusArea'];
+                    unset($nestedConfig['focusArea']);
+                }
+                if (isset($nestedConfig['coverArea'])) {
+                    $sizeConfig['coverArea'] = $nestedConfig['coverArea'];
+                    unset($nestedConfig['coverArea']);
+                }
+                $sizeConfig['allowedRatios'][$ratioIdentifier] = $nestedConfig;
             }
             foreach ($sizeConfig['allowedRatios'] as $allowedRatioKey => $allowedRatioConfig) {
                 $dimensions = new Dimensions($allowedRatioConfig['width'] ?? null, $allowedRatioConfig['height'] ?? null, $allowedRatioConfig['ratio'] ?? null);
@@ -141,7 +153,7 @@ class TcaService
                             ];
                         } else {
                             $cropVariantsTca[$cropVariantKey]['allowedAspectRatios']['NaN'] = [
-                                'title' => $dimensionConfig['title'] ?: 'LLL:EXT:core/Resources/Private/Language/locallang_wizards.xlf:imwizard.ratio.free',
+                                'title' => $dimensionConfig['title'] ?? 'LLL:EXT:core/Resources/Private/Language/locallang_wizards.xlf:imwizard.ratio.free',
                                 'value' => .0,
                             ];
                         }

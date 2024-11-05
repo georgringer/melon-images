@@ -1,5 +1,5 @@
 # Melon Images
-**Responsive Images Management for TYPO3**
+**Responsive Image Management for TYPO3**
 
 This package uses the powerful responsive image cropping capabilities of TYPO3 and provides easy frontend rendering.
 
@@ -122,6 +122,12 @@ croppingConfiguration:
                 height: 512
 
 ```
+
+### View the configuration
+
+Beginning with TYPO3 v11 you can view your Melon Images configuration in the Configuration module.
+
+![Melon Images in the Configuration module](doc/configuration-module.png?raw=true)
 
 ## Rendering
 
@@ -249,7 +255,32 @@ pixelDensities:
   - 2
 ```
 
-### 3. Per Table and Type Configuration
+### 3. Progressive Image File Formats
+
+`imageFileFormats`
+
+By default TYPO3 will automatically choose broadly supported file formats like `jpg` or `png`, depending on the source image. You can override this behavior by specifying a list of file formats that should be used for progressive image rendering.
+
+Example:
+
+```yaml
+imageFileFormats:
+  - webp
+  - _default
+```
+
+This will add `<source>` elements to the responsive picture element with the `webp` file formats. As well as the default file format. You can also omit the default file format:
+
+```yaml
+imageFileFormats:
+  - webp
+```
+
+The fallback image will always be rendered in the `_default` file format to support legacy browsers.
+
+Make sure you add the desired file extensions to `$GLOBALS['TYPO3_CONF_VARS']['GFX']['imagefile_ext']`.
+
+### 4. Per Table and Type Configuration
 
 `croppingConfiguration.<table>.<recordType>`
 
@@ -267,7 +298,7 @@ croppingConfiguration:
       # applies only to tt_content records with type (CType) textmedia
 ```
 
-### 4. Per Field Configuration
+### 5. Per Field Configuration
 
 `croppingConfiguration.<table>.<recordType>.<fieldName>`
 
@@ -279,7 +310,7 @@ The field must be:
 
 2. A field of the type `inline`, `select` or `group` referencing other records (See *7. Inline Records*)
 
-### 5. Variants
+### 6. Variants
 
 `croppingConfiguration.<table>.<recordType>.<fieldName>.variants`
 
@@ -301,13 +332,13 @@ croppingConfiguration:
 
 Reuse the variant name in the `variant` attribute of the `melon:responsivePicture` ViewHelper.
 
-### 5.1 Variant Configuration
+### 6.1 Variant Configuration
 
 `croppingConfiguration.<table>.<recordType>.<fieldName>.variants.<variantName>`
 
 `title` (optional): Title of the variant that is shown to the backend user. Per default the variant name (with the first letter uppercased) is used.
 
-### 6. Sizes
+### 7. Sizes
 
 `croppingConfiguration.<table>.<recordType>.<fieldName>.variants.<variantName>.sizes`
 
@@ -334,7 +365,7 @@ croppingConfiguration:
               # ...
 ```
 
-### 6.1 Size Configuration
+### 7.1 Size Configuration
 
 `croppingConfiguration.<table>.<recordType>.<fieldName>.variants.<variantName>.sizes.<sizeName>`
 
@@ -349,11 +380,11 @@ In the frontend they are still rendered as different sizes for different breakpo
 
 If you provide `width` and `height` it results in a fixed aspect ratio that is enforced in the backend cropping tool. Neat!
 
-### 6.1.1 Cover Areas
+### 7.1.1 Cover Areas
 
 `croppingConfiguration.<table>.<recordType>.<fieldName>.variants.<variantName>.sizes.<sizeName>.coverAreas`
 
-Array of cover areas. See the [TCA Reference](https://docs.typo3.org/typo3cms/TCAReference/ColumnsConfig/Type/ImageManipulation.html#cropvariants) for details on that feature.
+Array of cover areas. See the [TCA Reference](https://docs.typo3.org/m/typo3/reference-tca/main/en-us/ColumnsConfig/Type/ImageManipulation/Properties/CropVariants.html#define-cover-areas) for details on that feature.
 
 Each cover area needs has following properties:
 
@@ -381,7 +412,7 @@ croppingConfiguration:
                   height: 1
 ```
 
-### 6.1.2 Focus Area
+### 7.1.2 Focus Area
 
 `croppingConfiguration.<table>.<recordType>.<fieldName>.variants.<variantName>.sizes.<sizeName>.focusArea`
 
@@ -414,7 +445,7 @@ croppingConfiguration:
                 height: 0.2
 ```
 
-### 7. Inline Records (Nested Records)
+### 8. Inline Records (Nested Records)
 
 `croppingConfiguration.<table>.<recordType>.<fieldName>.<subType>.<subField>`
 
@@ -444,6 +475,21 @@ croppingConfiguration:
 ```
 
 You can nest this configuration as deep as you need it to be.
+
+## Power user hints
+
+If you use YAML anchors to reuse certain configuration snippets, prefix them with `__`. This way they will only be
+available during YAML parsing and will automatically be stripped afterwards in the parsed configuration.
+
+```
+# This follows facebook's recommendation for og:image of 1200x630
+__openGraph: &open-graph
+  title: Social Sharing
+  sizes:
+    all:
+      width: 1200
+      ratio: 1.91/1
+```
 
 ## Breaking Changes
 

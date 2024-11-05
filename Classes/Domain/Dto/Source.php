@@ -6,7 +6,7 @@ namespace Smichaelsen\MelonImages\Domain\Dto;
 
 use TYPO3Fluid\Fluid\Core\ViewHelper\TagBuilder;
 
-class Source
+class Source implements \JsonSerializable
 {
     protected Dimensions $dimensions;
 
@@ -15,12 +15,15 @@ class Source
     /**
      * @var Set[]
      */
-    protected $sets = [];
+    protected array $sets = [];
 
-    public function __construct(string $mediaQuery, Dimensions $dimensions)
+    protected ?string $type = null;
+
+    public function __construct(string $mediaQuery, Dimensions $dimensions, ?string $type = null)
     {
         $this->dimensions = $dimensions;
         $this->mediaQuery = $mediaQuery;
+        $this->type = $type;
     }
 
     public function getMediaQuery(): string
@@ -64,6 +67,45 @@ class Source
         if (!empty($this->mediaQuery)) {
             $tag->addAttribute('media', $this->mediaQuery);
         }
+        if ($this->type !== null) {
+            $tag->addAttribute('type', $this->type);
+        }
         return $tag->render();
+    }
+
+    public function jsonSerialize(): array
+    {
+        $return = [
+            'srcsets' => $this->sets,
+            'mediaQuery' => $this->mediaQuery,
+        ];
+
+        $height = $this->dimensions->getHeight();
+        if ($height !== null) {
+            $return['height'] = $height;
+        }
+        $width = $this->dimensions->getWidth();
+        if ($width !== null) {
+            $return['width'] = $width;
+        }
+        if ($this->type === null && $this->sets[0] instanceof Set) {
+            $n = strrpos($this->sets[0]->getImageUri(), '.');
+            $fileExtension = ($n === false) ? '' : substr($this->sets[0]->getImageUri(), $n + 1);
+            $return['type'] = $this->getTypeFromExtension($fileExtension);
+        } elseif ($this->type !== null) {
+            $return['type'] = $this->type;
+        }
+
+        return $return;
+    }
+
+    private function getTypeFromExtension(string $fileExtension): string
+    {
+        switch ($fileExtension) {
+            case 'jpg':
+                return 'image/jpeg';
+            default:
+                return 'image/' . $fileExtension;
+        }
     }
 }

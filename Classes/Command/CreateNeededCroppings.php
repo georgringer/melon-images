@@ -68,6 +68,7 @@ class CreateNeededCroppings extends Command
         } else {
             $message .= 'No croppings were missing.';
         }
+        $output->writeln($message);
         $this->addFlashMessage($message, FlashMessage::INFO);
         return 0;
     }
@@ -95,6 +96,9 @@ class CreateNeededCroppings extends Command
         $type = array_shift($tcaPath);
         $fieldName = array_shift($tcaPath);
         $fieldTca = $this->getFieldTca($localTableName, $type, $fieldName);
+        if ($fieldTca === null) {
+            return;
+        }
         $foreignTableName = $this->getForeignTableName($fieldTca['config']);
         if ($foreignTableName === null) {
             return;
@@ -145,7 +149,7 @@ class CreateNeededCroppings extends Command
                         if (isset($aspectRatioConfig['allowedRatios'])) {
                             $defaultRatio = $selectedRatio = $this->getDefaultRatioKey($aspectRatioConfig['allowedRatios']);
                             $allowedRatioConfig = $aspectRatioConfig['allowedRatios'][$defaultRatio];
-                            $dimensions = new Dimensions($allowedRatioConfig['width'], $allowedRatioConfig['height'], $allowedRatioConfig['ratio']);
+                            $dimensions = new Dimensions($allowedRatioConfig['width'] ?? null, $allowedRatioConfig['height'] ?? null, $allowedRatioConfig['ratio'] ?? null);
                             if ($dimensions->isFree()) {
                                 $selectedRatio = 'NaN';
                                 $cropArea = [
@@ -204,7 +208,7 @@ class CreateNeededCroppings extends Command
     {
         // try to find a "free" ratio
         foreach ($allowedRatios as $ratioKey => $ratioConfig) {
-            $dimensions = new Dimensions($ratioConfig['width'], $ratioConfig['height'], $ratioConfig['ratio']);
+            $dimensions = new Dimensions($ratioConfig['width'] ?? null, $ratioConfig['height'] ?? null, $ratioConfig['ratio'] ?? null);
             if ($dimensions->isFree()) {
                 return $ratioKey;
             }
@@ -216,11 +220,11 @@ class CreateNeededCroppings extends Command
 
     protected function getForeignTableName(array $fieldConfig): ?string
     {
-        if ($fieldConfig['type'] === 'inline' && $fieldConfig['MM']) {
+        if ($fieldConfig['type'] === 'inline' && ($fieldConfig['MM'] ?? false)) {
             // todo: Implement inline with MM
             return null;
         }
-        if ($fieldConfig['type'] === 'inline') {
+        if ($fieldConfig['type'] === 'inline' || $fieldConfig['type'] === 'file') {
             return $fieldConfig['foreign_table'];
         }
         if ($fieldConfig['type'] === 'select') {
@@ -233,11 +237,11 @@ class CreateNeededCroppings extends Command
     protected function queryForeignUids(string $localTableName, string $foreignTableName, array $fieldConfig, string $localType, array $localUids = null): array
     {
         $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable($foreignTableName);
-        if ($fieldConfig['type'] === 'inline' && $fieldConfig['MM']) {
+        if ($fieldConfig['type'] === 'inline' && ($fieldConfig['MM'] ?? false)) {
             // todo: Implement inline with MM
             return [];
         }
-        if ($fieldConfig['type'] === 'inline') {
+        if ($fieldConfig['type'] === 'inline' || $fieldConfig['type'] === 'file') {
             $queryBuilder
                 ->select($foreignTableName . '.uid')
                 ->from($foreignTableName);
@@ -253,7 +257,7 @@ class CreateNeededCroppings extends Command
                 $queryBuilder->andWhere($queryBuilder->expr()->in($foreignTableName . '.' . $fieldConfig['foreign_field'], $localUids));
             }
 
-            $typeField = $GLOBALS['TCA'][$localTableName]['ctrl']['type'];
+            $typeField = $GLOBALS['TCA'][$localTableName]['ctrl']['type'] ?? '';
             $queryBuilder->join(
                 $foreignTableName,
                 $localTableName,
@@ -263,7 +267,7 @@ class CreateNeededCroppings extends Command
             if ($localType !== '_all') {
                 $queryBuilder->andWhere($queryBuilder->expr()->eq($localTableName . '.' . $typeField, $queryBuilder->createNamedParameter($localType)));
             }
-            return array_map(function (array $record) {
+            return array_map(static function (array $record) {
                 return $record['uid'];
             }, $queryBuilder->execute()->fetchAll());
         } elseif ($fieldConfig['type'] === 'select') {
@@ -288,9 +292,12 @@ class CreateNeededCroppings extends Command
 
     protected function getFieldTca(string $table, string $type, string $fieldName)
     {
-        $tableTca = $GLOBALS['TCA'][$table];
-        $fieldTca = $tableTca['columns'][$fieldName];
-        if ($tableTca['ctrl']['type'] && $type !== '_all') {
+        $tableTca = $GLOBALS['TCA'][$table] ?? null;
+        $fieldTca = $tableTca['columns'][$fieldName] ?? null;
+        if (!$tableTca || !$fieldTca) {
+            return null;
+        }
+        if (($tableTca['ctrl']['type'] ?? false) && $type !== '_all') {
             $fieldTca = array_replace_recursive($fieldTca, $tableTca['types'][$type]['columnsOverrides'][$fieldName] ?? []);
         }
         return $fieldTca;
